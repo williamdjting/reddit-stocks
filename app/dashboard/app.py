@@ -90,8 +90,12 @@ def format_velocity(v: float | None) -> str:
 def main():
     st.title("📈 Reddit Pre-Breakout Monitor")
 
-    stats_df = load_latest_stats()
-    meta_df = load_ticker_meta()
+    try:
+        stats_df = load_latest_stats()
+        meta_df = load_ticker_meta()
+    except EnvironmentError as e:
+        st.error(str(e))
+        st.stop()
 
     if stats_df.empty:
         st.warning("No data found. Run the pipeline first.")
