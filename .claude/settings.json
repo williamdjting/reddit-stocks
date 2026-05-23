@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "jwnlabs-harness": {
+      "source": {
+        "source": "github",
+        "repo": "jwnlabs/jwnlabs-harness"
+      },
+      "autoUpdate": true
+    }
+  }
+}

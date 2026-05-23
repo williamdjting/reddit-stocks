@@ -1,0 +1,44 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 6:00 AM UTC every day
+  workflow_dispatch:        # manual trigger from GitHub UI
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90     # hard cap — alert if pipeline exceeds this
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      REDDIT_USER_AGENT: ${{ secrets.REDDIT_USER_AGENT }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r app/requirements.txt
+
+      - name: Run pipeline
+        working-directory: app
+        run: python -m pipeline.run
+
+      - name: Upload pipeline log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-failure-log-${{ github.run_id }}
+          path: app/pipeline.log
+          retention-days: 7

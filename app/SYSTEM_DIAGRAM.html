@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Diagram — Reddit Pre-Breakout Sentiment Monitor</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --surface: #ffffff;
+    --border: #dee2e6;
+    --text: #212529;
+    --text-muted: #6c757d;
+    --blue: #1a56db;
+    --blue-light: #e8f0fe;
+    --green: #057a55;
+    --green-light: #def7ec;
+    --orange: #c05621;
+    --orange-light: #feecdc;
+    --purple: #5521b5;
+    --purple-light: #edebff;
+    --red: #c81e1e;
+    --red-light: #fde8e8;
+    --slate: #374151;
+    --slate-light: #f3f4f6;
+    --given: #1a56db;
+    --when: #c05621;
+    --then: #057a55;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+
+  /* NAV */
+  .topnav {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--slate); color: #fff;
+    display: flex; align-items: center; gap: 0;
+    padding: 0 24px; height: 52px; border-bottom: 2px solid #1f2937;
+  }
+  .topnav-title { font-weight: 700; font-size: 15px; margin-right: 32px; white-space: nowrap; }
+  .topnav a {
+    color: #d1d5db; text-decoration: none; padding: 0 16px; height: 52px;
+    display: flex; align-items: center; font-size: 13px; font-weight: 500;
+    border-bottom: 3px solid transparent; transition: all .15s;
+  }
+  .topnav a:hover { color: #fff; background: rgba(255,255,255,.07); }
+  .topnav a.active { color: #fff; border-bottom-color: #60a5fa; }
+  .topnav-meta { margin-left: auto; font-size: 12px; color: #9ca3af; white-space: nowrap; }
+
+  /* SECTIONS */
+  .section { padding: 32px 24px; max-width: 1200px; margin: 0 auto; }
+  .section-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .section-sub { color: var(--text-muted); margin-bottom: 28px; font-size: 13px; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    overflow: hidden; margin-bottom: 20px;
+  }
+  .card-header {
+    padding: 10px 16px; font-weight: 700; font-size: 13px;
+    letter-spacing: .3px; color: #fff;
+  }
+  .card-body { padding: 16px; }
+
+  /* COMPONENT DIAGRAM */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .arch-full { grid-column: 1 / -1; }
+
+  .tier-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;
+    padding-left: 4px; border-left: 3px solid var(--border); padding-left: 8px;
+  }
+
+  .component-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  .comp-box {
+    border-radius: var(--radius); border: 1px solid var(--border);
+    overflow: hidden; flex: 1; min-width: 180px;
+    box-shadow: var(--shadow);
+  }
+  .comp-box .comp-head {
+    padding: 8px 12px; font-weight: 700; font-size: 12px; color: #fff;
+  }
+  .comp-box .comp-body { padding: 10px 12px; background: #fff; }
+  .comp-box .comp-tech { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .comp-box .comp-purpose { font-size: 12px; color: var(--text); line-height: 1.4; }
+
+  /* Arrow connector */
+  .arrow-row {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; margin: 4px 0; font-size: 11px; color: var(--text-muted);
+  }
+  .arrow-row .arrow-line {
+    flex: 1; height: 1px; background: var(--border); max-width: 120px;
+  }
+  .arrow-label { font-size: 10px; color: #9ca3af; white-space: nowrap; }
+
+  /* COLORS */
+  .c-blue    { background: #1e40af; }
+  .c-green   { background: #065f46; }
+  .c-orange  { background: #92400e; }
+  .c-purple  { background: #4c1d95; }
+  .c-red     { background: #991b1b; }
+  .c-slate   { background: #1f2937; }
+  .c-teal    { background: #0f766e; }
+  .c-indigo  { background: #3730a3; }
+  .c-amber   { background: #78350f; }
+  .c-gray    { background: #374151; }
+
+  /* FULL PIPELINE DIAGRAM */
+  .pipeline-diagram {
+    background: #0f172a; border-radius: var(--radius);
+    padding: 24px; font-family: 'Courier New', monospace;
+    font-size: 12px; color: #94a3b8; overflow-x: auto;
+    line-height: 1.6; white-space: pre; margin-bottom: 20px;
+  }
+
+  /* TECH STACK TABLE */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .5px;
+    color: var(--text-muted); padding: 8px 12px;
+    background: var(--slate-light); border-bottom: 2px solid var(--border);
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--slate-light); }
+  .badge {
+    display: inline-block; padding: 2px 7px; border-radius: 9999px;
+    font-size: 10px; font-weight: 700; letter-spacing: .3px;
+  }
+  .badge-blue   { background: var(--blue-light); color: var(--blue); }
+  .badge-green  { background: var(--green-light); color: var(--green); }
+  .badge-orange { background: var(--orange-light); color: var(--orange); }
+  .badge-red    { background: var(--red-light); color: var(--red); }
+  .badge-purple { background: var(--purple-light); color: var(--purple); }
+  .badge-gray   { background: #f3f4f6; color: #374151; }
+  .badge-p0     { background: #dc2626; color: #fff; }
+
+  /* INTEGRATION POINTS */
+  .integration-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .int-card {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; box-shadow: var(--shadow);
+  }
+  .int-card-head { padding: 8px 14px; font-weight: 700; font-size: 12px; color: #fff; }
+  .int-card-body { padding: 12px 14px; background: #fff; }
+  .int-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+  .int-label { font-weight: 600; color: var(--text-muted); min-width: 80px; }
+  .int-val { color: var(--text); }
+
+  /* SCENARIO FLOWS */
+  .feature-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 24px;
+    box-shadow: var(--shadow-md); overflow: hidden;
+  }
+  .feature-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+    background: var(--slate-light);
+  }
+  .feature-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--slate); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+  }
+  .feature-title { font-weight: 700; font-size: 15px; }
+  .feature-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .feature-body { padding: 18px; }
+
+  .happy-path-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--text-muted); margin-bottom: 12px;
+  }
+  .flow-steps {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 0; margin-bottom: 18px;
+  }
+  .step-node {
+    border-radius: 6px; padding: 6px 12px;
+    font-size: 12px; font-weight: 500; max-width: 180px;
+    line-height: 1.3; text-align: center;
+  }
+  .step-given { background: var(--blue-light); color: var(--blue); border: 1px solid #bfdbfe; }
+  .step-when  { background: var(--orange-light); color: var(--orange); border: 1px solid #fed7aa; }
+  .step-then  { background: var(--green-light); color: var(--green); border: 1px solid #a7f3d0; }
+  .step-arrow { color: #9ca3af; font-size: 18px; padding: 0 4px; }
+
+  .other-scenarios { margin-top: 4px; }
+  .other-scenarios-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .5px; color: var(--text-muted); margin-bottom: 8px;
+  }
+  .scenario-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 12px; background: var(--slate-light);
+    margin-bottom: 5px;
+  }
+  .scenario-type { font-size: 10px; font-weight: 600; color: var(--text-muted); min-width: 55px; }
+  .scenario-name { color: var(--text); flex: 1; }
+
+  /* SUMMARY BAR */
+  .summary-bar {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    padding: 16px 20px; background: var(--slate-light);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    margin-bottom: 24px;
+  }
+  .sum-item { text-align: center; }
+  .sum-num { font-size: 26px; font-weight: 800; line-height: 1; }
+  .sum-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .sum-blue   { color: var(--blue); }
+  .sum-green  { color: var(--green); }
+  .sum-orange { color: var(--orange); }
+  .sum-purple { color: var(--purple); }
+  .sum-red    { color: var(--red); }
+
+  /* ADR TABLE */
+  .adr-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .adr-row:last-child { border-bottom: none; }
+  .adr-id { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; }
+  .adr-decision { font-weight: 700; margin-bottom: 4px; }
+  .adr-rationale { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .adr-rev { margin-top: 4px; }
+
+  /* RISK TABLE */
+  .risk-high { color: var(--red); font-weight: 700; }
+  .risk-med  { color: var(--orange); font-weight: 700; }
+  .risk-low  { color: var(--green); font-weight: 700; }
+
+  /* SCROLL */
+  html { scroll-behavior: smooth; }
+
+  /* OPTIONAL BADGE */
+  .opt { font-size: 10px; background: #fef3c7; color: #92400e; border-radius: 9999px; padding: 1px 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="topnav-title">Reddit Pre-Breakout Monitor</span>
+  <a href="#architecture" class="active">Architecture</a>
+  <a href="#stack">Tech Stack</a>
+  <a href="#integrations">Integrations</a>
+  <a href="#decisions">Decisions</a>
+  <a href="#scenarios">Scenarios</a>
+  <a href="#risks">Risks</a>
+  <span class="topnav-meta">Generated 2026-05-23 · PostgreSQL · Python · Streamlit</span>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 1: ARCHITECTURE -->
+<div id="architecture" class="section">
+  <div class="section-title">System Architecture</div>
+  <div class="section-sub">Daily-batch pipeline → Supabase PostgreSQL → Streamlit dashboard. Zero ops: fully managed, unattended, cron-driven.</div>
+
+  <!-- TIER LAYOUT -->
+  <div style="margin-bottom:28px;">
+
+    <div class="tier-label">Tier 1 — User Interface</div>
+    <div class="component-row" style="margin-bottom:6px;">
+      <div class="comp-box">
+        <div class="comp-head c-slate">Browser (Solo Trader)</div>
+        <div class="comp-body">
+          <div class="comp-tech">No framework — Streamlit renders HTML</div>
+          <div class="comp-purpose">Read-only access to dashboard: tranche overview, ticker detail, daily digest, search.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-row"><div class="arrow-line"></div><span class="arrow-label">HTTPS · Streamlit Cloud URL</span><div class="arrow-line"></div></div>
+
+    <div class="tier-label">Tier 2 — Application Layer</div>
+    <div class="component-row" style="margin-bottom:6px;">
+      <div class="comp-box">
+        <div class="comp-head c-blue">Streamlit Dashboard</div>
+        <div class="comp-body">
+          <div class="comp-tech">Python · Streamlit · Plotly · supabase-py · Streamlit Cloud</div>
+          <div class="comp-purpose">Tranche overview (3 columns), ticker detail view, daily digest, pipeline health page, ticker search.</div>
+        </div>
+      </div>
+      <div class="comp-box">
+        <div class="comp-head c-indigo">Pipeline Orchestrator</div>
+        <div class="comp-body">
+          <div class="comp-tech">GitHub Actions · cron 0 6 * * * UTC</div>
+          <div class="comp-purpose">Sequences 6 pipeline stages daily. Emails on failure. workflow_dispatch for manual re-run.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:6px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <div class="arrow-row"><div class="arrow-line"></div><span class="arrow-label">SQL · supabase-py (anon key)</span><div class="arrow-line"></div></div>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <div class="arrow-row"><div class="arrow-line"></div><span class="arrow-label">SQL · supabase-py (service key)</span><div class="arrow-line"></div></div>
+      </div>
+    </div>
+
+    <!-- PIPELINE STAGES -->
+    <div class="tier-label">Tier 2b — Pipeline Stages (run inside GitHub Actions)</div>
+    <div class="component-row" style="margin-bottom:6px;flex-wrap:wrap;">
+      <div class="comp-box" style="min-width:140px;">
+        <div class="comp-head c-teal">Stage 1 · Apewisdom Ingest</div>
+        <div class="comp-body">
+          <div class="comp-tech">requests · apewisdom.io API</div>
+          <div class="comp-purpose">Fetches daily mention counts for all tickers. Writes apewisdom_snapshots.</div>
+        </div>
+      </div>
+      <div class="comp-box" style="min-width:140px;">
+        <div class="comp-head c-amber">Stage 2 · Reddit Ingest <span class="opt">optional</span></div>
+        <div class="comp-body">
+          <div class="comp-tech">PRAW · Reddit API</div>
+          <div class="comp-purpose">Post title/excerpt context only. Writes raw_mentions. Dropped if ToS prohibits.</div>
+        </div>
+      </div>
+      <div class="comp-box" style="min-width:140px;">
+        <div class="comp-head c-orange">Stage 3 · Ticker Registry</div>
+        <div class="comp-body">
+          <div class="comp-tech">yfinance · Claude API</div>
+          <div class="comp-purpose">Refreshes market cap. Resolves aliases for new tickers. Writes tickers.</div>
+        </div>
+      </div>
+      <div class="comp-box" style="min-width:140px;">
+        <div class="comp-head c-purple">Stage 4 · Scoring Engine</div>
+        <div class="comp-body">
+          <div class="comp-tech">Python · pandas</div>
+          <div class="comp-purpose">Rolling mention counts (1w–2y), velocity, acceleration, subreddit spread. Writes ticker_daily_stats.</div>
+        </div>
+      </div>
+      <div class="comp-box" style="min-width:140px;">
+        <div class="comp-head c-red">Stage 5 · Tranche Classifier</div>
+        <div class="comp-body">
+          <div class="comp-tech">Python · config.py thresholds</div>
+          <div class="comp-purpose">Phase-gated rules: Tier 3 Day 1, Tier 2 Mo 6, Tier 1 Mo 12. Writes tranche log.</div>
+        </div>
+      </div>
+      <div class="comp-box" style="min-width:140px;">
+        <div class="comp-head c-slate">Stage 6 · Run Logger</div>
+        <div class="comp-body">
+          <div class="comp-tech">Python · supabase-py</div>
+          <div class="comp-purpose">Upserts pipeline_runs with status, counts, errors, duration.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-row"><div class="arrow-line" style="max-width:300px;"></div><span class="arrow-label">PostgreSQL upserts · supabase-py</span><div class="arrow-line" style="max-width:300px;"></div></div>
+
+    <div class="tier-label">Tier 3 — Data Layer</div>
+    <div class="component-row" style="margin-bottom:6px;">
+      <div class="comp-box">
+        <div class="comp-head c-green">Supabase (PostgreSQL 15)</div>
+        <div class="comp-body">
+          <div class="comp-tech">Managed PostgreSQL · supabase-py SDK · Free → Pro ($25/mo)</div>
+          <div class="comp-purpose">
+            <strong>apewisdom_snapshots</strong> — append-only raw counts<br>
+            <strong>raw_mentions</strong> — optional Reddit context<br>
+            <strong>tickers</strong> — master registry + market cap<br>
+            <strong>ticker_daily_stats</strong> — velocity, acceleration, tranche<br>
+            <strong>ticker_tranche_log</strong> — transition history (ML training set)<br>
+            <strong>pipeline_runs</strong> — reliability log
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-row"><div class="arrow-line"></div><span class="arrow-label">HTTPS · JSON APIs</span><div class="arrow-line"></div></div>
+
+    <div class="tier-label">Tier 4 — External Services</div>
+    <div class="component-row">
+      <div class="comp-box">
+        <div class="comp-head c-teal">Apewisdom API</div>
+        <div class="comp-body">
+          <div class="comp-tech">apewisdom.io/api/v1.0/filter/all-stocks/page/{n}</div>
+          <div class="comp-purpose">Free, no auth. Aggregated Reddit mention counts. Primary required source.</div>
+        </div>
+      </div>
+      <div class="comp-box">
+        <div class="comp-head c-amber">Reddit API <span class="opt">optional</span></div>
+        <div class="comp-body">
+          <div class="comp-tech">PRAW · oauth.reddit.com</div>
+          <div class="comp-purpose">Post context only. Subject to ToS review. Entire pipeline works without it.</div>
+        </div>
+      </div>
+      <div class="comp-box">
+        <div class="comp-head c-orange">Yahoo Finance (yfinance)</div>
+        <div class="comp-body">
+          <div class="comp-tech">Python yfinance library · unofficial</div>
+          <div class="comp-purpose">Daily market cap per ticker. Fallback: cached value with cap_verified=false.</div>
+        </div>
+      </div>
+      <div class="comp-box">
+        <div class="comp-head c-purple">Anthropic Claude API</div>
+        <div class="comp-body">
+          <div class="comp-tech">claude-haiku-4-5 · api.anthropic.com</div>
+          <div class="comp-purpose">Alias extraction for new tickers only. Very infrequent (&lt;$1/mo). Graceful fallback.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 2: TECH STACK -->
+<div id="stack" class="section" style="padding-top: 0;">
+  <div class="section-title">Tech Stack</div>
+  <div class="section-sub">All layers use Python. All hosting uses free managed tiers. Cost ceiling: $200/month total.</div>
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Technology</th>
+            <th>Version / Tier</th>
+            <th>Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pipeline language</strong></td>
+            <td>Python</td>
+            <td><span class="badge badge-gray">3.11+</span></td>
+            <td>Ecosystem lock-in (PRAW, yfinance, supabase-py, streamlit all Python-first)</td>
+          </tr>
+          <tr>
+            <td><strong>Primary ingest</strong></td>
+            <td>Apewisdom API + requests</td>
+            <td><span class="badge badge-green">Free · No auth</span></td>
+            <td>Zero cost, no credentials, aggregates Reddit data across subreddits automatically</td>
+          </tr>
+          <tr>
+            <td><strong>Secondary ingest</strong></td>
+            <td>PRAW (Reddit API)</td>
+            <td><span class="badge badge-orange">Optional</span></td>
+            <td>Post context only; dropped if ToS prohibits; pipeline fully functional without it</td>
+          </tr>
+          <tr>
+            <td><strong>Market cap data</strong></td>
+            <td>yfinance</td>
+            <td><span class="badge badge-green">Free · Pinned</span></td>
+            <td>Zero auth, covers 500–2000 tickers; fallback to cached value on failure</td>
+          </tr>
+          <tr>
+            <td><strong>Alias extraction</strong></td>
+            <td>Anthropic claude-haiku-4-5</td>
+            <td><span class="badge badge-purple">&lt;$1/mo</span></td>
+            <td>Called only for new tickers; handles name variants ("Rocket Lab" → RKLB)</td>
+          </tr>
+          <tr>
+            <td><strong>Database</strong></td>
+            <td>Supabase (PostgreSQL 15)</td>
+            <td><span class="badge badge-blue">Free → $25/mo Pro</span></td>
+            <td>Managed, accessible from GitHub Actions and Streamlit Cloud simultaneously</td>
+          </tr>
+          <tr>
+            <td><strong>Scheduler / CI-CD</strong></td>
+            <td>GitHub Actions</td>
+            <td><span class="badge badge-green">Free (2000 min/mo)</span></td>
+            <td>Zero servers; built-in secrets; email on failure; manual dispatch</td>
+          </tr>
+          <tr>
+            <td><strong>Dashboard</strong></td>
+            <td>Streamlit + Plotly</td>
+            <td><span class="badge badge-blue">Latest PyPI</span></td>
+            <td>Python-native; same language as pipeline; connects to Supabase directly</td>
+          </tr>
+          <tr>
+            <td><strong>Dashboard hosting</strong></td>
+            <td>Streamlit Cloud</td>
+            <td><span class="badge badge-green">Free (1 app)</span></td>
+            <td>Auto-deploys from GitHub; zero config; no Vercel/Docker needed</td>
+          </tr>
+          <tr>
+            <td><strong>Data processing</strong></td>
+            <td>pandas</td>
+            <td><span class="badge badge-gray">Latest PyPI</span></td>
+            <td>Rolling window aggregations; efficient for 500–2000 ticker × 365 day matrix</td>
+          </tr>
+          <tr>
+            <td><strong>Testing</strong></td>
+            <td>pytest</td>
+            <td><span class="badge badge-gray">Latest PyPI</span></td>
+            <td>Unit tests for classifier logic; integration tests for DB writes</td>
+          </tr>
+          <tr>
+            <td><strong>Secrets</strong></td>
+            <td>GitHub Secrets + Streamlit Secrets</td>
+            <td><span class="badge badge-green">Built-in</span></td>
+            <td>No third-party secret manager needed at personal scale</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NOT USED -->
+  <div class="card">
+    <div class="card-header c-slate">What We Will NOT Use and Why</div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead>
+          <tr><th>Technology</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Vercel</td><td>Stateless serverless — cannot host a persistent Python/Streamlit process</td></tr>
+          <tr><td>Airflow / Prefect</td><td>Overkill for a single sequential daily pipeline; adds servers to maintain</td></tr>
+          <tr><td>Docker / Kubernetes</td><td>GitHub Actions provides a clean Python environment natively; no containers needed</td></tr>
+          <tr><td>Redis / Celery</td><td>No concurrent task queue needed — pipeline stages run sequentially</td></tr>
+          <tr><td>Auth (Clerk, Auth0)</td><td>v1 is single-user — no auth required</td></tr>
+          <tr><td>Next.js / React</td><td>Overengineered for a solo personal tool; upgrade path when SaaS needs polished UI</td></tr>
+          <tr><td>Financial Modeling Prep / Alpha Vantage</td><td>yfinance is zero-config for daily market cap; no API key needed</td></tr>
+          <tr><td>StockTwits / Twitter API</td><td>Out of scope v1; adds cost for marginal signal gain</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 3: INTEGRATIONS -->
+<div id="integrations" class="section" style="padding-top: 0;">
+  <div class="section-title">Integration Points</div>
+  <div class="section-sub">Every external dependency is a failure point. Each has a documented failure mode and fallback.</div>
+
+  <div class="integration-grid">
+    <div class="int-card">
+      <div class="int-card-head c-teal">Apewisdom API</div>
+      <div class="int-card-body">
+        <div class="int-row"><span class="int-label">Endpoint</span><span class="int-val">apewisdom.io/api/v1.0/filter/all-stocks/page/{n}</span></div>
+        <div class="int-row"><span class="int-label">Purpose</span><span class="int-val">Daily mention counts per ticker. Primary required source.</span></div>
+        <div class="int-row"><span class="int-label">Auth</span><span class="int-val">None — public API</span></div>
+        <div class="int-row"><span class="int-label">Rate limit</span><span class="int-val">Unknown — add 1s delay between page requests</span></div>
+        <div class="int-row"><span class="int-label">Failure</span><span class="int-val">HTTP error/timeout → skip stage, log apewisdom_stale=true</span></div>
+        <div class="int-row"><span class="int-label">Fallback</span><span class="int-val">Previous day's snapshot used for scoring; alert after 3 consecutive stale days</span></div>
+        <div class="int-row"><span class="int-label">Risk</span><span class="int-val"><span class="risk-high">HIGH</span> — unofficial, no SLA</span></div>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="int-card-head c-amber">Reddit API (PRAW) <span class="opt">optional</span></div>
+      <div class="int-card-body">
+        <div class="int-row"><span class="int-label">Purpose</span><span class="int-val">Post title/excerpt context for ticker detail view only</span></div>
+        <div class="int-row"><span class="int-label">Auth</span><span class="int-val">OAuth2 — client ID + secret in GitHub Secrets</span></div>
+        <div class="int-row"><span class="int-label">Rate limit</span><span class="int-val">60 req/min (free personal use); ~100 calls/day total</span></div>
+        <div class="int-row"><span class="int-label">Failure</span><span class="int-val">Auth failure or rate limit → skip stage entirely</span></div>
+        <div class="int-row"><span class="int-label">Fallback</span><span class="int-val">Dashboard shows "No Reddit post context available" — scoring unaffected</span></div>
+        <div class="int-row"><span class="int-label">Risk</span><span class="int-val"><span class="risk-med">MEDIUM</span> — ToS restrictions; component is optional</span></div>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="int-card-head c-orange">yfinance (Yahoo Finance)</div>
+      <div class="int-card-body">
+        <div class="int-row"><span class="int-label">Purpose</span><span class="int-val">Daily market cap + sector per ticker</span></div>
+        <div class="int-row"><span class="int-label">Auth</span><span class="int-val">None — unofficial Python library</span></div>
+        <div class="int-row"><span class="int-label">Rate limit</span><span class="int-val">Unofficial — add 0.5s delay; batch where possible</span></div>
+        <div class="int-row"><span class="int-label">Failure</span><span class="int-val">Yahoo API change → use cached tickers.market_cap; set cap_verified=false</span></div>
+        <div class="int-row"><span class="int-label">Fallback</span><span class="int-val">Cached value retained; tranche gates applied to last known cap</span></div>
+        <div class="int-row"><span class="int-label">Risk</span><span class="int-val"><span class="risk-med">MEDIUM</span> — broken ~3× in 3 years; OSS community patches quickly</span></div>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="int-card-head c-purple">Anthropic Claude API</div>
+      <div class="int-card-body">
+        <div class="int-row"><span class="int-label">Purpose</span><span class="int-val">Alias extraction for new tickers only (company name → $SYMBOL)</span></div>
+        <div class="int-row"><span class="int-label">Model</span><span class="int-val">claude-haiku-4-5 (~$0.001/call; &lt;$1/month)</span></div>
+        <div class="int-row"><span class="int-label">Frequency</span><span class="int-val">Only on new ticker insertion — very infrequent</span></div>
+        <div class="int-row"><span class="int-label">Failure</span><span class="int-val">API error → skip alias extraction; ticker tracked by symbol only</span></div>
+        <div class="int-row"><span class="int-label">Fallback</span><span class="int-val">Aliases added on next successful run; exact symbol match still works</span></div>
+        <div class="int-row"><span class="int-label">Risk</span><span class="int-val"><span class="risk-low">LOW</span> — commodity API; easily swapped</span></div>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="int-card-head c-green">Supabase (PostgreSQL)</div>
+      <div class="int-card-body">
+        <div class="int-row"><span class="int-label">Purpose</span><span class="int-val">Primary and only data store — all pipeline reads and writes</span></div>
+        <div class="int-row"><span class="int-label">Auth</span><span class="int-val">Service key (pipeline write) + anon key (dashboard read)</span></div>
+        <div class="int-row"><span class="int-label">Free limits</span><span class="int-val">500MB storage, 2GB bandwidth/month; ~6mo runway at 2,000 tickers</span></div>
+        <div class="int-row"><span class="int-label">Failure</span><span class="int-val">Connection failure → entire pipeline fails; GitHub Actions emails notification</span></div>
+        <div class="int-row"><span class="int-label">Fallback</span><span class="int-val">None — Supabase is critical path. Upgrade to Pro ($25/mo) before hitting limits</span></div>
+        <div class="int-row"><span class="int-label">Risk</span><span class="int-val"><span class="risk-low">LOW</span> — managed service; auto backups 7-day retention</span></div>
+      </div>
+    </div>
+    <div class="int-card">
+      <div class="int-card-head c-indigo">GitHub Actions</div>
+      <div class="int-card-body">
+        <div class="int-row"><span class="int-label">Purpose</span><span class="int-val">Daily pipeline scheduler + CI runner</span></div>
+        <div class="int-row"><span class="int-label">Schedule</span><span class="int-val">cron: '0 6 * * *' (6:00 AM UTC daily)</span></div>
+        <div class="int-row"><span class="int-label">Free limits</span><span class="int-val">2,000 min/month; pipeline target: &lt;60 min/day = 1,800 min/month</span></div>
+        <div class="int-row"><span class="int-label">Failure</span><span class="int-val">GitHub outage → miss one day; no data loss (idempotent design)</span></div>
+        <div class="int-row"><span class="int-label">Fallback</span><span class="int-val">workflow_dispatch for manual re-trigger; next cron picks up normally</span></div>
+        <div class="int-row"><span class="int-label">Risk</span><span class="int-val"><span class="risk-low">LOW</span> — 99.9%+ reliability; email notification on job failure</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 4: DECISIONS -->
+<div id="decisions" class="section" style="padding-top: 0;">
+  <div class="section-title">Architectural Decisions</div>
+  <div class="section-sub">Non-obvious choices and why they were made. These are the decisions that, if wrong, are most expensive to reverse.</div>
+
+  <div class="card">
+    <div class="card-body">
+      <div class="adr-row">
+        <div class="adr-id">ADR-001</div>
+        <div class="adr-decision">Apewisdom as primary source; Reddit API as optional secondary</div>
+        <div class="adr-rationale">Apewisdom already aggregates Reddit mention counts — it solves the counting problem without direct Reddit API dependency. Reddit's 2023 policy changes introduced commercial use restrictions. The Apewisdom signal is sufficient for all velocity and tranche scoring.</div>
+        <div class="adr-rev"><span class="badge badge-green">Reversibility: High</span> — Reddit ingester can be added later; raw_mentions table is already in place.</div>
+      </div>
+      <div class="adr-row">
+        <div class="adr-id">ADR-002</div>
+        <div class="adr-decision">GitHub Actions for scheduling, not a dedicated worker</div>
+        <div class="adr-rationale">A dedicated worker adds $5–20/month infrastructure and server management for one daily job. GitHub Actions free tier covers 1,800 min/month at &lt;60 min/day runtime. Pipeline logs visible in GitHub UI without additional tooling.</div>
+        <div class="adr-rev"><span class="badge badge-green">Reversibility: High</span> — moving to a dedicated scheduler is a config change.</div>
+      </div>
+      <div class="adr-row">
+        <div class="adr-id">ADR-003</div>
+        <div class="adr-decision">Supabase over raw PostgreSQL or SQLite</div>
+        <div class="adr-rationale">Supabase provides managed Postgres with a Python SDK, built-in table viewer, automatic backups, and a REST API. SQLite cannot be accessed remotely from Streamlit Cloud. Raw PostgreSQL on VPS adds ops overhead.</div>
+        <div class="adr-rev"><span class="badge badge-orange">Reversibility: Medium</span> — migration requires data export + new connection config; schema is standard PostgreSQL.</div>
+      </div>
+      <div class="adr-row">
+        <div class="adr-id">ADR-004</div>
+        <div class="adr-decision">Separate raw and computed tables — never one big table</div>
+        <div class="adr-rationale">Raw data is immutable ground truth. Computed scores are a function of raw data + scoring algorithm. Separation means: scoring can be rerun without re-scraping; raw data is never overwritten by a bug; ticker_tranche_log accumulates as a labeled ML training set.</div>
+        <div class="adr-rev"><span class="badge badge-red">Reversibility: Low</span> — schema separation baked in from day one.</div>
+      </div>
+      <div class="adr-row">
+        <div class="adr-id">ADR-005</div>
+        <div class="adr-decision">Phase-gated tranche activation: Tier 3 Day 1, Tier 2 Mo 6, Tier 1 Mo 12</div>
+        <div class="adr-rationale">A ticker with 3 weeks of data cannot be classified as a "2-year Seed signal" — there is no data to support the claim. Showing "maturing — Tier 2 activates Nov 2026" is honest and prevents false signals.</div>
+        <div class="adr-rev"><span class="badge badge-green">Reversibility: High</span> — activation dates are config parameters in config.py.</div>
+      </div>
+      <div class="adr-row">
+        <div class="adr-id">ADR-006</div>
+        <div class="adr-decision">Streamlit over Next.js for the dashboard</div>
+        <div class="adr-rationale">Founder is a Python developer. Streamlit lets the dashboard be built in the same language as the pipeline — no context switching, no JavaScript build tooling, no separate deployment pipeline. Plotly charts are native. Upgrade path to Next.js when the product needs a polished SaaS UI.</div>
+        <div class="adr-rev"><span class="badge badge-green">Reversibility: Easy</span> — dashboard is read-only; replace with any frontend against the same DB.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY DECISION TABLE -->
+  <div class="card">
+    <div class="card-header c-slate">Key Architectural Decisions Summary</div>
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead>
+          <tr><th>Decision</th><th>Options Considered</th><th>Choice</th><th>Reversibility</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Dashboard framework</td><td>Streamlit, Next.js, Metabase, Grafana</td><td>Streamlit</td><td><span class="badge badge-green">Easy</span></td></tr>
+          <tr><td>Scheduler</td><td>GitHub Actions, VPS cron, Airflow, Render</td><td>GitHub Actions</td><td><span class="badge badge-green">Easy</span></td></tr>
+          <tr><td>Database</td><td>Supabase, SQLite, raw PostgreSQL, PlanetScale</td><td>Supabase (PostgreSQL)</td><td><span class="badge badge-red">Hard</span></td></tr>
+          <tr><td>Required data source</td><td>Apewisdom+Reddit, Reddit only, scraping only</td><td>Apewisdom required / Reddit optional</td><td><span class="badge badge-green">Easy</span></td></tr>
+          <tr><td>Raw/computed separation</td><td>Single wide table, separate raw+computed</td><td>Separate tables</td><td><span class="badge badge-red">Painful</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 5: SCENARIOS -->
+<div id="scenarios" class="section" style="padding-top: 0;">
+  <div class="section-title">Scenario Flows</div>
+  <div class="section-sub">10 features, 35 Gherkin scenarios. Happy path shown as step flow; edge cases and failures listed below each feature.</div>
+
+  <!-- SUMMARY BAR -->
+  <div class="summary-bar">
+    <div class="sum-item"><div class="sum-num">35</div><div class="sum-label">Total Scenarios</div></div>
+    <div class="sum-item"><div class="sum-num sum-red">12</div><div class="sum-label">P0 (must pass to ship)</div></div>
+    <div class="sum-item"><div class="sum-num sum-blue">10</div><div class="sum-label">Unit tests</div></div>
+    <div class="sum-item"><div class="sum-num sum-purple">16</div><div class="sum-label">Integration tests</div></div>
+    <div class="sum-item"><div class="sum-num sum-orange">5</div><div class="sum-label">E2E tests</div></div>
+    <div class="sum-item"><div class="sum-num sum-green">4</div><div class="sum-label">Manual only</div></div>
+  </div>
+
+  <!-- FEATURE 1 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">1</div>
+      <div><div class="feature-title">Daily Digest View</div><div class="feature-sub">So that the trader can evaluate early-stage opportunities before the broader market notices</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-orange">E2E</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Digest shows new tranche entries</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">Pipeline completed for today</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-given">RKLB entered pre_pop today</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Open Daily Digest page</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">RKLB visible under Pre-pop group</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Row shows: symbol, tranche, velocity, top subreddit</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-orange">E2E</span><span class="badge badge-p0">P0</span><span class="scenario-name">Clicking a ticker navigates to its full mention trajectory</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">No tranche movements → shows "No new signals today"</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Results grouped correctly — Pre-pop entries never appear in Seed column</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 2 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">2</div>
+      <div><div class="feature-title">Tranche Overview</div><div class="feature-sub">So that the trader knows which tickers are long-term builds, medium-term, or near-term setups</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-orange">E2E</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Three-column view sorted by velocity</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">12 tickers in pre_pop, 5 in early, 0 in seed</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Open Tranche Overview page</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">3 columns visible: Seed · Early · Pre-pop</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Pre-pop: 12 tickers, sorted by velocity desc</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Early: 5 tickers, sorted by velocity desc</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-orange">E2E</span><span class="badge badge-p0">P0</span><span class="scenario-name">Seed &amp; Early show "Maturing — activates [date]" before month 12 / month 6</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Market cap filter hides tickers above selected range</span></div>
+        <div class="scenario-row"><span class="badge badge-orange">E2E</span><span class="scenario-name">Days-in-tranche shown alongside each ticker in the column</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 3 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">3</div>
+      <div><div class="feature-title">Ticker Detail View</div><div class="feature-sub">So that the trader can judge the quality and consistency of a signal before committing capital</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-orange">E2E</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — All 6 elements shown for a mature ticker</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">RKLB tracked 210 days, all snapshots present</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Open detail view for RKLB</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Mention volume chart (1w, 1mo, 3mo, 6mo windows)</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Subreddit breakdown + velocity + acceleration + first seen date</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Up to 5 post excerpts with title, subreddit, date</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="badge badge-p0">P0</span><span class="scenario-name">95-day ticker shows "Not enough data yet" label — NOT zero — for 6mo and 1y windows</span></div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">Page renders in under 2 seconds for 365 rows of data</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Reddit ingester disabled → "No post context available" shown; scores unaffected</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 4 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">4</div>
+      <div><div class="feature-title">Daily Digest Notification</div><div class="feature-sub">So that the trader never misses a ticker accelerating toward a breakout</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-purple">integration</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Digest available by 07:00 UTC after 06:47 run</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">Pipeline runs at 06:00 UTC</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-given">Completes successfully at 06:47 UTC</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Open Daily Digest at 07:00 UTC</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Digest reflects today's run</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">"Last updated" timestamp = today</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Each digest entry shows: symbol, tranche, velocity score, top subreddit</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Stable ticker (no velocity spike, no tranche change) does not appear in digest</span></div>
+        <div class="scenario-row"><span class="badge badge-gray">manual</span><span class="scenario-name">GitHub Actions sends email on pipeline job failure</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 5 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">5</div>
+      <div><div class="feature-title">Ticker Search</div><div class="feature-sub">So that the trader can validate whether Reddit sentiment supports or contradicts their thesis</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-orange">E2E</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Known ticker returns full history</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">RKLB tracked 210 days with complete data</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Type "RKLB" in search bar, press enter</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Ticker Detail View for RKLB shown</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Includes: chart, tranche "pre_pop", velocity, first seen date</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="badge badge-p0">P0</span><span class="scenario-name">Unknown ticker → "No data yet for MSTR — will appear once first mentions are detected"</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Search is case-insensitive: "rklb" returns same result as "RKLB"</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Ticker in "noise" tranche still returns full history — not filtered out</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 6 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">6</div>
+      <div><div class="feature-title">Data Immaturity Warning</div><div class="feature-sub">So that the trader does not mistake a new ticker for a genuinely early-signal one</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-purple">integration</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Ticker with &lt;90 days shows immaturity label</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">NVTS first seen 45 days ago</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">NVTS appears in any dashboard view</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Label: "Insufficient history (45 / 90 days)"</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">NOT assigned to seed or early tranche</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="badge badge-p0">P0</span><span class="scenario-name">Exactly 90 days → eligible for tranche evaluation (may get "unclassified", not "insufficient_data")</span></div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">89 days → still "insufficient_data" — not shown on Tranche Overview</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">New ticker with velocity=5.0 but days=30 → "insufficient_data" regardless of score</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 7 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">7</div>
+      <div><div class="feature-title">Apewisdom Daily Ingest</div><div class="feature-sub">So that daily mention counts are available for all scoring and classification</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-purple">integration</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — 1,200 tickers stored from 12 pages</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">Apewisdom API returns 1,200 tickers across 12 pages</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Ingest stage runs for 2026-05-23</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">1,200 rows in apewisdom_snapshots for snapshot_date=today</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Each row has non-null mention_count_24h</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="badge badge-p0">P0</span><span class="scenario-name">Re-running ingest for same date → still exactly 1,200 rows (idempotent upsert)</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="badge badge-p0">P0</span><span class="scenario-name">API returns 503 → apewisdom_stale=true; yesterday's data intact; pipeline continues</span></div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">New ticker "LUNR" not yet in tickers table → auto-registered with first_seen_at=today</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 8 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">8</div>
+      <div><div class="feature-title">Tranche Classification</div><div class="feature-sub">So that tickers are correctly assigned to detection tiers based on phase-gated rules</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-blue">unit</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Tier 3 Pre-pop correctly assigned</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">ACHR: mention_count_1w=350, subreddit_spread=4, market_cap=$900M, days=120</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Tranche classifier runs</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">ACHR receives tranche = "pre_pop"</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">tickers.current_tranche updated to "pre_pop"</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="badge badge-p0">P0</span><span class="scenario-name">200-day dataset → Tier 1 "seed" blocked (phase gate requires 365+ days)</span></div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">GME spike without sustained build (deceleration) → assigned "noise"</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Tranche transition logged in ticker_tranche_log only when tranche actually changes</span></div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">META (market cap $1.4T) excluded from pre_pop despite high volume — cap gate blocks it</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 9 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">9</div>
+      <div><div class="feature-title">Pipeline Idempotency</div><div class="feature-sub">So that a failed or repeated pipeline run never corrupts existing data</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-purple">integration</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Re-running full pipeline produces identical results</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">Pipeline ran successfully on 2026-05-22</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Pipeline re-run for same date via workflow_dispatch</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Same row count in ticker_daily_stats for 2026-05-22</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">Identical velocity and tranche values</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">pipeline_runs has exactly 1 row for run_date (upserted)</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="badge badge-p0">P0</span><span class="scenario-name">Stage 3 crash → Stages 1–2 rows intact; ticker_daily_stats has no partial rows; status="partial"</span></div>
+        <div class="scenario-row"><span class="badge badge-purple">integration</span><span class="scenario-name">Manual re-trigger after failure fills data gap; final status = "success"</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURE 10 -->
+  <div class="feature-card">
+    <div class="feature-head">
+      <div class="feature-num">10</div>
+      <div><div class="feature-title">Quality Filter</div><div class="feature-sub">So that pump tickers, OTC listings, and low-quality signals are suppressed from tranche results</div></div>
+      <div style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="badge badge-p0">P0</span><span class="badge badge-blue">unit</span>
+      </div>
+    </div>
+    <div class="feature-body">
+      <div class="happy-path-label">Happy Path — Sub-$50M market cap ticker excluded</div>
+      <div class="flow-steps">
+        <div class="step-node step-given">TINY: market_cap=$30M, mention_count_1w=500</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-when">Quality filter + classifier run</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">TINY not assigned to any active tranche</div>
+        <span class="step-arrow">→</span>
+        <div class="step-node step-then">TINY excluded from all Tranche Overview columns</div>
+      </div>
+      <div class="other-scenarios">
+        <div class="other-scenarios-title">Edge Cases &amp; Failures</div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">&gt;80% of mentions from accounts &lt;30 days old → "noise" classification</span></div>
+        <div class="scenario-row"><span class="badge badge-blue">unit</span><span class="scenario-name">100% of mentions from blocked subreddit (r/RobinHoodPennyStocks) → "noise"</span></div>
+        <div class="scenario-row"><span class="badge badge-gray">manual</span><span class="scenario-name">Quality thresholds changed in config.py → new threshold applied on next run without schema migration</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SECTION 6: RISKS -->
+<div id="risks" class="section" style="padding-top: 0;">
+  <div class="section-title">Known Risks</div>
+  <div class="section-sub">Top technical risks with severity and mitigation plan.</div>
+
+  <div class="card">
+    <div class="card-body" style="padding:0;">
+      <table>
+        <thead>
+          <tr><th>Risk</th><th>Severity</th><th>Mitigation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Apewisdom API goes down or changes format</strong></td>
+            <td><span class="risk-high">HIGH</span></td>
+            <td>Unofficial service, no SLA. Pipeline degrades gracefully — skip stage, use previous day's data. Format detection catches API changes early. Alert after 3 consecutive stale days.</td>
+          </tr>
+          <tr>
+            <td><strong>Reddit API ToS prohibits use case</strong></td>
+            <td><span class="risk-med">MEDIUM</span></td>
+            <td>Already treated as optional. Entire system functions on Apewisdom-only. PRAW ingester is a bonus, not a dependency.</td>
+          </tr>
+          <tr>
+            <td><strong>yfinance breaks (Yahoo Finance unofficial)</strong></td>
+            <td><span class="risk-med">MEDIUM</span></td>
+            <td>Pin yfinance version. Fallback: use cached tickers.market_cap, set cap_verified=false. yfinance OSS community patches quickly (~3× breaks in 3 years).</td>
+          </tr>
+          <tr>
+            <td><strong>Supabase free tier storage exhausted (500MB)</strong></td>
+            <td><span class="risk-med">MEDIUM</span></td>
+            <td>Raw data grows ~5–10MB/day. Free tier lasts ~3–6 months at full scale. Upgrade to Pro ($25/mo). Monitor weekly via pipeline_runs metadata.</td>
+          </tr>
+          <tr>
+            <td><strong>Pipeline runs but scores are silently wrong</strong></td>
+            <td><span class="risk-med">MEDIUM</span></td>
+            <td>Each stage logs record counts to pipeline_runs. If len(results) &lt; 10 when 500 expected, raise before writing. Anomaly detection in the run logger.</td>
+          </tr>
+          <tr>
+            <td><strong>GitHub Actions free tier minutes exhausted</strong></td>
+            <td><span class="risk-low">LOW</span></td>
+            <td>2,000 min/month free. Pipeline at &lt;60 min/day = 1,800 min/month. Tight but within limits. Optimize pipeline to run in &lt;45 min to create headroom.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="text-align:center; padding: 24px 0; color: var(--text-muted); font-size: 12px;">
+    System Diagram · Generated 2026-05-23 · Source: ARCHITECTURE-2026-05-23.md · TECHSTACK-2026-05-23.md · SCENARIOS-2026-05-23.md
+  </div>
+</div>
+
+<script>
+  // Sticky nav active state
+  const sections = document.querySelectorAll('[id]');
+  const navLinks = document.querySelectorAll('.topnav a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+    navLinks.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+
+</body>
+</html>
