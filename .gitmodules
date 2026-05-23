@@ -1,0 +1,3 @@
+[submodule "app/harness"]
+	path = app/harness
+	url = https://github.com/jwnlabs/jwnlabs-harness.git
